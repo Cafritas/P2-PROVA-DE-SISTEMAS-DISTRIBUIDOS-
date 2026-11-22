@@ -14,7 +14,7 @@ Ao executar o código original, sem nenhuma correção, o terminal mostrou: limi
 
 ### Evidência 1 - Primeira execução
 
-![Evidência 1](evidencias/evidencia1.png)
+![Evidência 1](evidencia1.png)
 
 ## 3. Problema A - Concorrência
 
@@ -28,7 +28,7 @@ Alterei `MAXIMO_SIMULTANEO = 3` para `MAXIMO_SIMULTANEO = 2`. Como o semáforo �
 
 ### Evidência 2 - Concorrência
 
-![Evidência 2](evidencias/evidencia2.png)
+![Evidência 2](evidencia2.png)
 
 ## 4. Problema B - Replicação e consistência
 
@@ -42,7 +42,7 @@ Troquei a instrução para `replica["estoque"] = principal["estoque"]`. Agora, a
 
 ### Evidência 3 - Sincronização
 
-![Evidência 3](evidencias/evidencia3.png)
+![Evidência 3](evidencia3.png)
 
 ## 5. Problema C - Tolerância a falhas
 
@@ -56,7 +56,7 @@ Mudei a segunda condição para `if replica["online"]:`. Agora, com o principal 
 
 ### Evidência 4 - Tolerância a falhas
 
-![Evidência 4](evidencias/evidencia4.png)
+![Evidência 4](evidencia4.png)
 
 ## 6. Validação do programa
 
@@ -64,7 +64,7 @@ Depois das três correções, o programa executou sem erros e mostrou: limite si
 
 ### Evidência 5 - Execução completa
 
-![Evidência 5](evidencias/evidencia5.png)
+![Evidência 5](evidencia5.png)
 
 ## 7. Análise técnica
 
