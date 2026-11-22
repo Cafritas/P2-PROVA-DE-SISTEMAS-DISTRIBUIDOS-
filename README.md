@@ -110,5 +110,5 @@ Nesta atividade aprendi na prática como funcionam concorrência, replicação, 
 ## 9. Entrega
 
 **Aluno(a):** Carine Mesquita Freitas
-**Repositório:** [LINK DO GITHUB]
+**Repositório:**https://github.com/Cafritas/P2-PROVA-DE-SISTEMAS-DISTRIBUIDOS-/blob/main/README.md
 **Data:** 18/11/2026
