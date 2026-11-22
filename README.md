@@ -1,267 +1,114 @@
-# P2-PROVA-DE-SISTEMAS-DISTRIBUIDOS-
-AQUI É O CODIGO SEM SER CORRIGIDO
+# P2 - Sistemas Distribuídos
 
- COPIE TODO CODIGO A BAIXO DESDE A PRIMEIRA LINHA ATE A ULTIMA PARA O ARQUIVO CENTRAL_PEDIDOS.PY.
-NONE
+**Aluno(a):** Carine Mesquita Freitas
+**Professora:** Simone Tatiane do Canto
+**Data:** 18/11/2026
 
-import threading
-import time
+## 1. Situação-problema
 
-# servidores simulados 
-principal = {
-    "online": true, 
-    "estoque": 10
-}
+A Central de Pedidos Distribuída tem um servidor principal e uma réplica que guarda uma cópia do estoque. A equipe de TI encontrou três problemas: (A) o sistema aceita 3 pedidos em processamento ao mesmo tempo, mas a empresa permite apenas 2; (B) o estoque da réplica não é atualizado depois dos pedidos; (C) quando o servidor principal fica indisponível, o sistema não consegue usar a réplica para responder às consultas.
 
-replica = {
-    "online" true,
-    "estoque" 10
-}
+## 2. Primeira execução
 
-# controle de concorremcia
-MAXIMO_SIMULTANEO = 3
+Ao executar o código original, sem nenhuma correção, o terminal mostrou: limite simultâneo 3, estoque inicial 10, pedidos confirmados [101, 102, 103], estoque principal 7, réplica antes 10 e réplica depois 10 (não mudou). Após a simulação de falha, a consulta retornou `INDISPONIVEL None`. Ou seja, os três problemas apareceram na prática.
 
-semaforo = threading.semaphore (MAXIMO_SIMULTANEO)
-trava = threading.lock ()
+### Evidência 1 - Primeira execução
 
-pedidos_confirmados = [] 
+![Evidência 1](evidencias/evidencia1.png)
 
+## 3. Problema A - Concorrência
 
-def processar_pedido (numero):
-     with semaforo:
-       time.sleep(0.1)
+Qual problema foi identificado?
 
+A variável `MAXIMO_SIMULTANEO` estava com valor 3, que é o valor usado para criar o semáforo (`threading.Semaphore(MAXIMO_SIMULTANEO)`). Assim, até 3 pedidos podiam ser processados ao mesmo tempo, violando a regra da empresa de no máximo 2.
 
-       whit trava:
-        
-         if principal["estoque"] >  0:
-            
-            principal["estoque"] -= 1
+Qual alteração foi realizada?
 
-            pedidos_confirmados.append(numero)
+Alterei `MAXIMO_SIMULTANEO = 3` para `MAXIMO_SIMULTANEO = 2`. Como o semáforo é criado a partir dessa variável, agora só 2 pedidos entram na região de processamento ao mesmo tempo; o terceiro espera um dos outros terminar.
 
+### Evidência 2 - Concorrência
 
-def sincronizar ():
+![Evidência 2](evidencias/evidencia2.png)
 
-  replica["estoque"] = replica["estoque"]
+## 4. Problema B - Replicação e consistência
 
+Qual problema foi identificado?
 
-def consultar_estoque():
- if principal ["online"]:
-   return (
-    "principal",
-    principal["estoque"]
+A função `sincronizar()` fazia `replica["estoque"] = replica["estoque"]`, ou seja, a réplica copiava o valor dela mesma e nunca recebia o valor do servidor principal. Por isso a réplica ficava com 10 enquanto o principal já estava com 7 (inconsistência).
 
-   )
+Qual alteração foi realizada?
 
-   if principaal ["online"]:
-     return (
-     "REPLICA",
-     replica[ "estoque"]
-     )
+Troquei a instrução para `replica["estoque"] = principal["estoque"]`. Agora, ao sincronizar, a réplica copia o estoque atual do servidor principal e passa a mostrar 7.
 
+### Evidência 3 - Sincronização
 
-return "indisponivel", none
+![Evidência 3](evidencias/evidencia3.png)
 
+## 5. Problema C - Tolerância a falhas
 
-print("=== central de pedidos ===")
+Qual problema foi identificado?
 
-print(
-    
-    "limite simultaneo:",
-    MAXIMO_SIMULTANEO
-)
+Na função `consultar_estoque()`, a segunda condição verificava `principal["online"]` de novo, em vez de `replica["online"]`. Quando o principal ficava offline, as duas condições davam falso e a função retornava `INDISPONIVEL`, mesmo com a réplica funcionando.
 
-print(c
-"estoque inicial:",
-principal["estoque"]
+Qual alteração foi realizada?
 
-)
+Mudei a segunda condição para `if replica["online"]:`. Agora, com o principal offline, o sistema consulta a réplica e retorna `REPLICA 7`, continuando a responder.
 
-trabalhadores = [
-  threading.thread(
-  target=processar_pedido,
-  args=(numeros,)
-  )
-  for numero in [101,102,103]
-]
+### Evidência 4 - Tolerância a falhas
 
-for trabalhador in trabalhadores:
-    trabalhador.start()
-for trabalhador in trabalhadores:
-    trabalhador.join()
+![Evidência 4](evidencias/evidencia4.png)
 
-    print(
-    "pedidos confirmados:",
-    sorted(pedidos_confirmados)
-    )
+## 6. Validação do programa
 
-print(
- "pedidos confirmados:",
- sorted(pedidos_confirmados)
- 
- )
+Depois das três correções, o programa executou sem erros e mostrou: limite simultâneo 2 (de acordo com a regra), os três pedidos confirmados [101, 102, 103], estoque principal 7, réplica 10 antes e 7 depois da sincronização (consistente) e, após a falha simulada do principal, a consulta retornou `REPLICA 7`, ou seja, o sistema continuou funcionando.
 
- print(
- "estoque principal:",
- principal["estoque"]
+### Evidência 5 - Execução completa
 
- 
-)
+![Evidência 5](evidencias/evidencia5.png)
 
-print(
-"replica antes:"
-replica["estoque"]
-)
+## 7. Análise técnica
 
-sincronizar ()
+### Questão 1
+Qual é a função do semáforo no processamento dos pedidos?
 
-print(
-"replica depois:",
+Resposta:
 
-replica["estoque"]
+O semáforo controla quantos pedidos podem ser processados ao mesmo tempo. Ele funciona como um contador de "vagas": cada pedido pega uma vaga ao entrar no bloco `with semaforo` e a devolve ao sair. Quando as vagas acabam, os demais pedidos esperam. Assim o sistema respeita o limite da empresa (2 simultâneos) e não sobrecarrega o servidor.
 
-)
+### Questão 2
+Por que é necessário sincronizar os dados entre o servidor principal e a réplica?
 
-#simulaçao de falha
+Resposta:
 
-principal["online"]= false
+Porque a réplica existe para ser uma cópia fiel do principal. Se ela não for atualizada, fica com dados antigos (inconsistência) e, se o principal cair, o sistema passaria a informar um estoque errado (10 em vez de 7), o que pode gerar vendas de produtos que não existem. A sincronização mantém a consistência entre os servidores.
 
-nome, estoque = consultar_estoque()
+### Questão 3
+O que significa tolerância a falhas e como ela aparece neste programa?
 
-print(
-"consulta apos falha:"
-nome,
+Resposta:
 
-estoque
+Tolerância a falhas é a capacidade de o sistema continuar funcionando mesmo quando um componente falha. No programa, ela aparece na função `consultar_estoque()`: se o servidor principal fica offline (simulado com `principal["online"] = False`), a consulta é redirecionada para a réplica e continua retornando o estoque, em vez de ficar indisponível.
 
-)
----------------------------------------------------------------------------------
-PROVA – SISTEMAS DISTRIBUÍDOS
+### Questão 4
+Para que serve o Lock no programa e como o controle de acesso aos recursos ajuda a prevenir problemas de concorrência?
 
-Aluna: CARINE MESQUITA FREITAS
-Professora: Simone Tatiane do Canto
-Disciplina: Sistemas Distribuídos
-Data: 18/11/2026
+Resposta:
 
-1. Objetivo da atividade
+O Lock garante exclusão mútua: só uma thread por vez executa o bloco `with trava`, onde o estoque é verificado e diminuído e o pedido é registrado. Sem ele, duas threads poderiam ler o mesmo valor de estoque ao mesmo tempo e gravar um resultado errado (condição de corrida), perdendo atualizações ou vendendo além do estoque. O Lock protege os dados compartilhados, mantendo-os corretos.
 
-Corrigir três problemas identificados em um sistema de processamento de pedidos de uma empresa de comércio eletrônico:
+### Questão 5
+A sincronização do estoque deve acontecer antes ou depois do processamento dos pedidos? Explique a relação de causalidade.
 
-Concorrência: limitar o processamento a dois pedidos simultâneos.
-Replicação: manter o estoque da réplica atualizado.
-Disponibilidade: permitir que o sistema utilize a réplica quando o servidor principal ficar indisponível.
-2. Código Python corrigido
+Resposta:
 
-Arquivo: central_pedidos.py
+Deve acontecer depois. O estoque do principal muda como consequência do processamento dos pedidos (causa: pedidos processados; efeito: estoque 10 → 7). A réplica só pode copiar o valor correto depois que essa mudança ocorreu. Se sincronizar antes, ela copiaria o valor antigo (10) e voltaria a ficar desatualizada. Por isso a ordem correta é processar os pedidos primeiro e sincronizar em seguida.
 
-python
-import threading
-import time
+## 8. Conclusão
 
-# Servidores simulados
-principal = {
-    "online": True,
-    "estoque": 10
-}
+Nesta atividade aprendi na prática como funcionam concorrência, replicação, consistência e tolerância a falhas em um sistema distribuído. Vi que o semáforo limita o processamento simultâneo e que o Lock protege os dados compartilhados. Também entendi que a réplica precisa ser sincronizada depois das alterações no principal e que ela permite ao sistema continuar funcionando se o servidor principal falhar. Pequenos erros no código (um número, uma variável) causam problemas sérios, por isso é importante ler e testar com atenção.
 
-replica = {
-    "online": True,
-    "estoque": 10
-}
+## 9. Entrega
 
-# Controle de concorrência
-MAXIMO_SIMULTANEO = 2
-
-semaforo = threading.Semaphore(MAXIMO_SIMULTANEO)
-trava = threading.Lock()
-
-pedidos_confirmados = []
-
-
-def processar_pedido(numero):
-    with semaforo:
-        time.sleep(0.1)
-
-        with trava:
-            if principal["estoque"] > 0:
-                principal["estoque"] -= 1
-                pedidos_confirmados.append(numero)
-
-
-def sincronizar():
-    replica["estoque"] = principal["estoque"]
-
-
-def consultar_estoque():
-    if principal["online"]:
-        return "PRINCIPAL", principal["estoque"]
-
-    elif replica["online"]:
-        return "REPLICA", replica["estoque"]
-
-    return "INDISPONIVEL", None
-
-
-print("=== CENTRAL DE PEDIDOS ===")
-
-print("Limite simultaneo:", MAXIMO_SIMULTANEO)
-print("Estoque inicial:", principal["estoque"])
-
-trabalhadores = [
-    threading.Thread(
-        target=processar_pedido,
-        args=(numero,)
-    )
-    for numero in [101, 102, 103]
-]
-
-for trabalhador in trabalhadores:
-    trabalhador.start()
-
-for trabalhador in trabalhadores:
-    trabalhador.join()
-
-print("Pedidos confirmados:", sorted(pedidos_confirmados))
-print("Estoque principal:", principal["estoque"])
-
-print("Replica antes:", replica["estoque"])
-
-sincronizar()
-
-print("Replica depois:", replica["estoque"])
-
-# Simulação de falha
-principal["online"] = False
-
-nome, estoque = consultar_estoque()
-
-print("Consulta apos falha:", nome, estoque)
-
-3. Correções realizadas
-Problema A – Concorrência
-
-
-O limite original era de três pedidos simultâneos. Foi alterado para dois, conforme a regra da empresa.
-
-python
-MAXIMO_SIMULTANEO = 2
-
-Problema B – Replicação e consistência
-
-A função de sincronização estava copiando o estoque da própria réplica. Foi corrigida para receber o estoque atualizado do servidor principal.
-
-python
-def sincronizar():
-    replica["estoque"] = principal["estoque"]
-
-Problema C – Disponibilidade
-
-A consulta foi corrigida para utilizar a réplica quando o servidor principal estiver indisponível.
-
-python
-def consultar_estoque():
-    if principal["online"]:
-        return "PRINCIPAL", principal["estoque"]
-
-    elif replica["online"]:
+**Aluno(a):** Carine Mesquita Freitas
+**Repositório:** [LINK DO GITHUB]
+**Data:** 18/11/2026
